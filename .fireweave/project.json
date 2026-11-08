@@ -1,0 +1,31 @@
+{
+  "defaultEnvironment": "production",
+  "orgId": "f8rxds8a0rwKnYUvAkmw6HTHCoWMwEKJ",
+  "projectId": "369b1896-e288-4aac-b434-7abffed5c0fa",
+  "projectName": "OlloBooks",
+  "rolloutReady": {
+    "attestUrl": "https://app-server.fireweave.ai"
+  },
+  "server": {
+    "url": "https://app-server.fireweave.ai"
+  },
+  "surfaces": [
+    {
+      "entrypoint": "src/main.tsx",
+      "harnessKind": "package",
+      "metricsClient": "posthog",
+      "path": ".",
+      "rolloutCredentialEnv": "FIREWEAVE_BROWSER_KEY",
+      "startProfile": "client",
+      "surface": "web",
+      "surfaceId": "sfc_01M6YDVDBESVF7JE2A3CQ418FJ",
+      "trackerPath": ".fireweave/stamps.ts",
+      "sdk": {
+        "name": "@fireweaveai/web-sdk",
+        "version": "3.0.0",
+        "channel": "production"
+      }
+    }
+  ],
+  "version": 2
+}
