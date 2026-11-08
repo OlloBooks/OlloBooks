@@ -1,6 +1,13 @@
+import posthog, { isPostHogConfigured } from '../posthog.ts'
+
 const SAMPLE = ['', '2', '', '4', '3', '', '4', '', '', '1', '', '3', '2', '', '', '1']
 
 export function Library({ onOpen }: { onOpen: () => void }) {
+  function openSudokuMaker() {
+    if (isPostHogConfigured) posthog.capture('sudoku_maker_opened')
+    onOpen()
+  }
+
   return (
     <main className="page">
       <header className="mast">
@@ -17,7 +24,7 @@ export function Library({ onOpen }: { onOpen: () => void }) {
       </p>
 
       <section className="shelf" aria-label="Books">
-        <button className="book-sudoku" type="button" onClick={onOpen}>
+        <button className="book-sudoku" type="button" onClick={openSudokuMaker}>
           <span className="mini-grid" aria-hidden="true">
             {SAMPLE.map((value, index) => (
               <span key={index}>{value}</span>

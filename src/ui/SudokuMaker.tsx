@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import posthog, { isPostHogConfigured, posthogLog } from '../posthog.ts'
 import { generateBook, type Puzzle } from '../sudoku/generate.ts'
 import {
   DIFFICULTIES,
@@ -51,6 +52,21 @@ function sameOptions(a: Options, b: Options) {
   return a.difficulty === b.difficulty && a.size === b.size && a.count === b.count && a.perSheet === b.perSheet && a.answers === b.answers
 }
 
+function bookAttributes(options: Options) {
+  return {
+    difficulty: options.difficulty,
+    grid_size: options.size,
+    puzzle_count: options.count,
+    puzzles_per_sheet: options.perSheet,
+    includes_answer_key: options.answers,
+  }
+}
+
+function captureBookEvent(event: string, options: Options) {
+  if (!isPostHogConfigured) return
+  posthog.capture(event, bookAttributes(options))
+}
+
 export function SudokuMaker({ onBack }: { onBack: () => void }) {
   const [options, setOptions] = useState<Options>(DEFAULTS)
   const [book, setBook] = useState<Puzzle[] | null>(null)
@@ -88,9 +104,21 @@ export function SudokuMaker({ onBack }: { onBack: () => void }) {
       setBook(puzzles)
       setMadeWith(snapshot)
       setProgress(null)
+      captureBookEvent('sudoku_book_generated', snapshot)
+      posthogLog.info('sudoku book generated', {
+        operation: 'sudoku_book_generation',
+        status: 'completed',
+        ...bookAttributes(snapshot),
+      })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not make that book.')
       setProgress(null)
+      captureBookEvent('sudoku_book_generation_failed', snapshot)
+      posthogLog.error('sudoku book generation failed', {
+        operation: 'sudoku_book_generation',
+        status: 'failed',
+        ...bookAttributes(snapshot),
+      })
     } finally {
       setBusy(false)
     }
@@ -105,6 +133,12 @@ export function SudokuMaker({ onBack }: { onBack: () => void }) {
       includeAnswers: madeWith.answers,
     })
     doc.save(`ollobooks-sudoku-${madeWith.size}x${madeWith.size}-${madeWith.difficulty}.pdf`)
+    captureBookEvent('sudoku_pdf_downloaded', madeWith)
+    posthogLog.info('sudoku PDF download initiated', {
+      operation: 'sudoku_pdf_download',
+      status: 'initiated',
+      ...bookAttributes(madeWith),
+    })
   }
 
   const preview = book?.[0]
