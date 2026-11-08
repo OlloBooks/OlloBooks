@@ -2,11 +2,21 @@ import { allowLocalJobModes, isCronAuthorized } from './cron.ts'
 import { runDaily, siteOrigin, type DailyMode } from './daily.ts'
 import { createStore, type SubscriberStore } from './store.ts'
 import { isProduction, signUnsubscribeToken, verifyUnsubscribeToken } from './token.ts'
-import { validateSubscription } from './validate.ts'
+import { validateSubscription, type Schedule } from './validate.ts'
 
 export const MESSAGE_READY = "You're on the list. The first PDF arrives the next morning."
 export const MESSAGE_PENDING =
   "You're on the list. The first PDF arrives the next morning, once email delivery is configured."
+
+export function subscriptionMessage(schedule: Schedule, configured: boolean): string {
+  if (schedule === 'daily') return configured ? MESSAGE_READY : MESSAGE_PENDING
+  const cadence = schedule === 'weekly' ? 'weekly' : 'monthly'
+  const later = schedule === 'weekly' ? 'once a week' : 'once a month'
+  if (configured) {
+    return `You're on the list for ${cadence} puzzles. The first PDF arrives the next morning. After that, puzzles arrive ${later}.`
+  }
+  return `You're on the list for ${cadence} puzzles. The first PDF arrives the next morning, once email delivery is configured. After that, puzzles arrive ${later}.`
+}
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -91,7 +101,7 @@ export async function handleSubscribe(request: Request, store: SubscriberStore =
   const configured = deliveryConfigured()
   const payload: { ok: true; message: string; delivery: 'configured' | 'pending'; unsubscribeUrl?: string } = {
     ok: true,
-    message: configured ? MESSAGE_READY : MESSAGE_PENDING,
+    message: subscriptionMessage(parsed.value.schedule, configured),
     delivery: configured ? 'configured' : 'pending',
   }
 

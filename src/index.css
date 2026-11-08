@@ -372,10 +372,32 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 
 .subscribe {
   min-width: 0;
+  max-width: 100%;
   margin-top: 28px;
 }
 
+.subscribe-prompt {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.subscribe-prompt:hover { color: var(--ink); }
+
 .subscribe-card {
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 14px;
   padding: 22px 22px 18px;
   border: 1px solid #e5d4bf;
   border-radius: 28px;
@@ -384,6 +406,29 @@ button:focus-visible, input:focus-visible, a:focus-visible {
     var(--card);
   box-shadow: 0 18px 40px rgba(70, 42, 16, 0.08);
 }
+
+.subscribe-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subscribe-close {
+  flex: none;
+  margin: 0;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.subscribe-close:hover { color: var(--ink); }
 
 .subscribe-card h2 {
   font-size: clamp(1.8rem, 4vw, 2.5rem);
@@ -417,7 +462,19 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 
 .subscribe .choice {
+  min-width: 0;
   min-height: 56px;
+}
+
+.subscribe .choice strong,
+.subscribe .choice span {
+  overflow-wrap: anywhere;
+}
+
+.subscribe .actions .primary {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 
 .subscribe .stepper input {
@@ -445,8 +502,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .book-sudoku, .maker-layout, .soon-row { grid-template-columns: 1fr; }
   .mini-grid { width: min(180px, 100%); }
   .preview-panel { position: static; }
-  .choices { grid-template-columns: 1fr; }
-  .choice { min-height: 64px; }
+  .choices, .subscribe .choices { grid-template-columns: 1fr; }
+  .choice, .subscribe .choice { min-height: 64px; }
 }
 
 @media (min-width: 801px) {
