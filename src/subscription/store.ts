@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Difficulty, Size } from '../sudoku/model.ts'
+import type { Schedule } from './validate.ts'
 
 export type Subscriber = {
   email: string
@@ -8,9 +9,16 @@ export type Subscriber = {
   difficulty: Difficulty
   count: number
   includeAnswers: boolean
+  /** Missing on records saved before schedules existed. Those count as daily. */
+  schedule?: Schedule
   createdAt: string
   unsubscribedAt: string | null
   lastSentOn: string | null
+}
+
+export function subscriberSchedule(subscriber: { schedule?: string | null }): Schedule {
+  if (subscriber.schedule === 'weekly' || subscriber.schedule === 'monthly') return subscriber.schedule
+  return 'daily'
 }
 
 export type SubscriberStore = {

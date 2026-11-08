@@ -1,9 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { sheetPlan } from '../sudoku/model.ts'
 import { isCronAuthorized } from './cron.ts'
-import { puzzleEmail, runDaily, utcDay } from './daily.ts'
+import { isDue, puzzleEmail, runDaily, utcDay } from './daily.ts'
 import { buildDailyPdf, isPdf } from './pdf.ts'
-import { memoryStore, type Subscriber } from './store.ts'
+import { memoryStore, subscriberSchedule, type Subscriber, type SubscriberStore } from './store.ts'
+
+function deliver(store: SubscriberStore, iso: string, fetchImpl: typeof fetch) {
+  return runDaily({
+    now: new Date(iso),
+    store,
+    fetchImpl,
+    resendApiKey: 'test-key',
+    emailFrom: 'OlloBooks <puzzles@ollobooks.com>',
+    origin: 'http://127.0.0.1:5173',
+    secret: 'test-unsubscribe-secret',
+    mode: 'send',
+  })
+}
 
 function subscriber(overrides: Partial<Subscriber> = {}): Subscriber {
   return {
@@ -101,7 +114,96 @@ describe('daily puzzles', () => {
     expect(result.reason).toMatch(/RESEND_API_KEY is unset/)
     expect(called).toBe(false)
     expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc').subject).toBe("Today's OlloBooks puzzles")
+    expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc', 'weekly').subject).toBe("This week's OlloBooks puzzles")
+    expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc', 'weekly').text).toMatch(/This week's/)
+    expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc', 'monthly').subject).toBe("This month's OlloBooks puzzles")
+    expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc', 'monthly').text).toMatch(/This month's/)
+    expect(puzzleEmail('http://127.0.0.1:5173/api/unsubscribe?token=abc', 'monthly').text).toContain('/api/unsubscribe?token=')
   })
+
+  it('skips a weekly subscriber for 6 days, a monthly subscriber until next month, and treats a missing schedule as daily', async () => {
+    const store = memoryStore([
+      subscriber({ email: 'week@example.com', schedule: 'weekly', lastSentOn: '2026-11-08' }),
+      subscriber({ email: 'month@example.com', schedule: 'monthly', lastSentOn: '2026-11-08' }),
+      subscriber({ email: 'legacy@example.com', lastSentOn: '2026-11-08' }),
+    ])
+    expect(subscriberSchedule(subscriber({ email: 'legacy@example.com' }))).toBe('daily')
+    const sentToday = new Date('2026-11-08T13:00:00.000Z')
+    expect(isDue(subscriber({ schedule: 'weekly', lastSentOn: '2026-11-08' }), sentToday)).toBe(false)
+    expect(isDue(subscriber({ schedule: 'weekly', lastSentOn: '2026-11-08' }), new Date('2026-11-14T13:00:00.000Z'))).toBe(false)
+    expect(isDue(subscriber({ schedule: 'weekly', lastSentOn: '2026-11-08' }), new Date('2026-11-15T13:00:00.000Z'))).toBe(true)
+    expect(isDue(subscriber({ schedule: 'weekly', lastSentOn: null }), sentToday)).toBe(true)
+    expect(isDue(subscriber({ schedule: 'monthly', lastSentOn: '2026-11-08' }), new Date('2026-11-30T23:00:00.000Z'))).toBe(false)
+    expect(isDue(subscriber({ schedule: 'monthly', lastSentOn: '2026-11-08' }), new Date('2026-12-01T00:30:00.000Z'))).toBe(true)
+    expect(isDue(subscriber({ lastSentOn: '2026-11-08' }), sentToday)).toBe(false)
+    expect(isDue(subscriber({ lastSentOn: '2026-11-08' }), new Date('2026-11-09T13:00:00.000Z'))).toBe(true)
+
+    const calls: Array<{ body: { subject: string; text: string; to: string[] } }> = []
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      calls.push({ body: JSON.parse(String(init?.body)) as (typeof calls)[number]['body'] })
+      return new Response(JSON.stringify({ id: 'email_1' }), { status: 200 })
+    }
+    const send = (iso: string) => deliver(store, iso, fetchImpl)
+
+    const sameDay = await send('2026-11-08T13:00:00.000Z')
+    expect(sameDay.emailed).toBe(0)
+    expect(sameDay.skipped).toBe(3)
+
+    const daySix = await send('2026-11-14T13:00:00.000Z')
+    expect(daySix.recipients).toEqual(['legacy@example.com'])
+    expect(daySix.skipped).toBe(2)
+    expect(calls.at(-1)?.body.subject).toBe("Today's OlloBooks puzzles")
+
+    const daySeven = await send('2026-11-15T13:00:00.000Z')
+    expect(daySeven.recipients).toEqual(['week@example.com', 'legacy@example.com'])
+    expect(daySeven.skipped).toBe(1)
+    const weeklyMail = calls.find((call) => call.body.to[0] === 'week@example.com')
+    expect(weeklyMail?.body.subject).toBe("This week's OlloBooks puzzles")
+    expect(weeklyMail?.body.text).toMatch(/This week's/)
+    expect(weeklyMail?.body.text).toContain('/api/unsubscribe?token=')
+
+    const daySevenAgain = await send('2026-11-15T13:00:00.000Z')
+    expect(daySevenAgain.emailed).toBe(0)
+    expect(daySevenAgain.skipped).toBe(3)
+
+    const lateMonth = await send('2026-11-30T13:00:00.000Z')
+    expect(lateMonth.recipients).not.toContain('month@example.com')
+    expect(lateMonth.recipients).toContain('week@example.com')
+
+    const nextMonth = await send('2026-12-01T13:00:00.000Z')
+    expect(nextMonth.recipients).toContain('month@example.com')
+    expect(nextMonth.recipients).not.toContain('week@example.com')
+    const monthlyMail = calls.find((call) => call.body.to[0] === 'month@example.com')
+    expect(monthlyMail?.body.subject).toBe("This month's OlloBooks puzzles")
+    expect(monthlyMail?.body.text).toMatch(/This month's/)
+    expect(monthlyMail?.body.text).toContain('/api/unsubscribe?token=')
+
+    const nextMonthAgain = await send('2026-12-01T13:00:00.000Z')
+    expect(nextMonthAgain.emailed).toBe(0)
+    expect((await store.get('month@example.com'))?.lastSentOn).toBe('2026-12-01')
+    expect((await store.get('legacy@example.com'))?.lastSentOn).toBe('2026-12-01')
+  }, 30000)
+
+  it('mails a new weekly or monthly subscriber on the next run, then waits', async () => {
+    const store = memoryStore([
+      subscriber({ email: 'fresh-week@example.com', schedule: 'weekly' }),
+      subscriber({ email: 'fresh-month@example.com', schedule: 'monthly' }),
+    ])
+    const calls: Array<{ body: { subject: string; to: string[] } }> = []
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      calls.push({ body: JSON.parse(String(init?.body)) as (typeof calls)[number]['body'] })
+      return new Response(JSON.stringify({ id: 'email_1' }), { status: 200 })
+    }
+    const first = await deliver(store, '2026-11-08T13:00:00.000Z', fetchImpl)
+    expect(first.recipients).toEqual(['fresh-week@example.com', 'fresh-month@example.com'])
+    expect(calls.map((call) => call.body.subject)).toEqual([
+      "This week's OlloBooks puzzles",
+      "This month's OlloBooks puzzles",
+    ])
+    const nextDay = await deliver(store, '2026-11-09T13:00:00.000Z', fetchImpl)
+    expect(nextDay.emailed).toBe(0)
+    expect(nextDay.skipped).toBe(2)
+  }, 20000)
 
   it('rejects cron callers that do not present the secret on Vercel', () => {
     const previousNode = process.env.NODE_ENV

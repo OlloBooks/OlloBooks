@@ -4,12 +4,16 @@ export const MIN_DAILY_PUZZLES = 1
 export const MAX_DAILY_PUZZLES = 6
 export const DEFAULT_DAILY_PUZZLES = 3
 
+export const SCHEDULES = ['daily', 'weekly', 'monthly'] as const
+export type Schedule = (typeof SCHEDULES)[number]
+
 export type SubscriptionRequest = {
   email: string
   size: Size
   difficulty: Difficulty
   count: number
   includeAnswers: boolean
+  schedule: Schedule
 }
 
 const EMAIL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i
@@ -48,7 +52,10 @@ export function validateSubscription(input: unknown): ValidationResult {
   const includeAnswers = parseAnswers(body.includeAnswers)
   if (includeAnswers == null) return { ok: false, error: 'Choose whether to include an answer key.' }
 
-  return { ok: true, value: { email, size, difficulty, count, includeAnswers } }
+  const schedule = parseSchedule(body.schedule)
+  if (!schedule) return { ok: false, error: 'Choose Daily, Weekly, or Monthly.' }
+
+  return { ok: true, value: { email, size, difficulty, count, includeAnswers, schedule } }
 }
 
 function parseSize(value: unknown): Size | null {
@@ -77,4 +84,11 @@ function parseAnswers(value: unknown): boolean | null {
   if (value == null) return true
   if (typeof value === 'boolean') return value
   return null
+}
+
+function parseSchedule(value: unknown): Schedule | null {
+  if (value == null || value === '') return 'daily'
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toLowerCase()
+  return SCHEDULES.find((schedule) => schedule === normalized) ?? null
 }

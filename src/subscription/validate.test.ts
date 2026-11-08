@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { handleSubscribe, handleUnsubscribe } from './handlers.ts'
-import { createFileStore } from './store.ts'
+import { createFileStore, subscriberSchedule } from './store.ts'
 import { signUnsubscribeToken } from './token.ts'
 import { validateSubscription } from './validate.ts'
 
@@ -13,6 +13,7 @@ describe('subscribe validation', () => {
     expect(validateSubscription({ email: 'a@b' }).ok).toBe(false)
     expect(validateSubscription({ email: 'parent@example.com', count: 7 }).ok).toBe(false)
     expect(validateSubscription({ email: 'parent@example.com', size: 5 }).ok).toBe(false)
+    expect(validateSubscription({ email: 'parent@example.com', schedule: 'hourly' }).ok).toBe(false)
 
     const parsed = validateSubscription({ email: ' Parent@Example.com ' })
     expect(parsed).toEqual({
@@ -23,8 +24,13 @@ describe('subscribe validation', () => {
         difficulty: 'easy',
         count: 3,
         includeAnswers: true,
+        schedule: 'daily',
       },
     })
+
+    const weekly = validateSubscription({ email: 'parent@example.com', schedule: ' Weekly ' })
+    expect(weekly.ok).toBe(true)
+    if (weekly.ok) expect(weekly.value.schedule).toBe('weekly')
   })
 
   it('returns an error response for an invalid address and stores a valid one', async () => {
@@ -61,8 +67,30 @@ describe('subscribe validation', () => {
       expect(body.delivery).toBe('pending')
       expect(body.message).toMatch(/next morning/)
       expect(body.message).toMatch(/configured/)
-      const saved = JSON.parse(await readFile(path.join(directory, 'subscribers.json'), 'utf8')) as Record<string, { count: number }>
+      const saved = JSON.parse(await readFile(path.join(directory, 'subscribers.json'), 'utf8')) as Record<
+        string,
+        { count: number; schedule?: string }
+      >
       expect(saved['parent@example.com']?.count).toBe(3)
+      expect(saved['parent@example.com']?.schedule).toBe('daily')
+
+      const weekly = await handleSubscribe(
+        new Request('http://127.0.0.1:5173/api/subscribe', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'week@example.com', schedule: 'weekly' }),
+        }),
+        store,
+      )
+      expect(weekly.status).toBe(200)
+      const weeklyBody = (await weekly.json()) as { message: string }
+      expect(weeklyBody.message).toMatch(/weekly/)
+      expect(weeklyBody.message).toMatch(/once a week/)
+      const savedWeekly = JSON.parse(await readFile(path.join(directory, 'subscribers.json'), 'utf8')) as Record<
+        string,
+        { schedule?: string }
+      >
+      expect(savedWeekly['week@example.com']?.schedule).toBe('weekly')
 
       const token = await signUnsubscribeToken('parent@example.com')
       const page = await handleUnsubscribe(new Request(`http://127.0.0.1:5173/api/unsubscribe?token=${encodeURIComponent(token)}`), store)
@@ -100,6 +128,34 @@ describe('subscribe validation', () => {
     expect(response.status).toBe(500)
     const body = (await response.json()) as { error: string }
     expect(body.error).toMatch(/save/i)
+  })
+
+  it('treats a stored record with no schedule field as daily', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'ollobooks-subscribers-'))
+    const previous = process.env.SUBSCRIBER_STORE_DIR
+    process.env.SUBSCRIBER_STORE_DIR = directory
+    try {
+      const store = createFileStore()
+      await store.save({
+        email: 'legacy@example.com',
+        size: 4,
+        difficulty: 'easy',
+        count: 3,
+        includeAnswers: true,
+        createdAt: '2026-11-01T00:00:00.000Z',
+        unsubscribedAt: null,
+        lastSentOn: null,
+      })
+      const raw = await readFile(path.join(directory, 'subscribers.json'), 'utf8')
+      expect(raw).not.toContain('"schedule"')
+      const loaded = await store.get('legacy@example.com')
+      expect(loaded?.schedule).toBeUndefined()
+      expect(subscriberSchedule(loaded ?? { schedule: 'weekly' })).toBe('daily')
+    } finally {
+      if (previous === undefined) delete process.env.SUBSCRIBER_STORE_DIR
+      else process.env.SUBSCRIBER_STORE_DIR = previous
+      await rm(directory, { recursive: true, force: true })
+    }
   })
 })
 

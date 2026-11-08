@@ -1,6 +1,7 @@
 import { isPdf, buildDailyPdf } from './pdf.ts'
-import { createStore, type Subscriber, type SubscriberStore } from './store.ts'
+import { createStore, subscriberSchedule, type Subscriber, type SubscriberStore } from './store.ts'
 import { signUnsubscribeToken, unsubscribeSecret } from './token.ts'
+import type { Schedule } from './validate.ts'
 
 export type DailyMode = 'send' | 'preview' | 'test'
 
@@ -38,6 +39,34 @@ export function utcDay(now: Date): string {
   return now.toISOString().slice(0, 10)
 }
 
+const DAY_MS = 86_400_000
+
+function calendarDay(value: string): string | null {
+  const day = value.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null
+  const parsed = Date.parse(`${day}T00:00:00.000Z`)
+  if (Number.isNaN(parsed)) return null
+  if (new Date(parsed).toISOString().slice(0, 10) !== day) return null
+  return day
+}
+
+function daysBetween(earlier: string, later: string): number {
+  const start = Date.parse(`${earlier}T00:00:00.000Z`)
+  const end = Date.parse(`${later}T00:00:00.000Z`)
+  return Math.round((end - start) / DAY_MS)
+}
+
+/** Whether this cron run should mail the subscriber. A missing schedule counts as daily. */
+export function isDue(subscriber: Pick<Subscriber, 'schedule' | 'lastSentOn'>, now: Date): boolean {
+  const last = subscriber.lastSentOn ? calendarDay(subscriber.lastSentOn) : null
+  if (!last) return true
+  const today = utcDay(now)
+  const schedule = subscriberSchedule(subscriber)
+  if (schedule === 'weekly') return daysBetween(last, today) >= 7
+  if (schedule === 'monthly') return last.slice(0, 7) !== today.slice(0, 7)
+  return last !== today
+}
+
 export function siteOrigin(fallback?: string): string {
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
   if (productionHost) return `https://${productionHost}`
@@ -50,21 +79,31 @@ function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
 }
 
-export function puzzleEmail(unsubscribeUrl: string): { subject: string; text: string; html: string } {
-  const subject = "Today's OlloBooks puzzles"
-  const text = [
-    'A few Sudoku puzzles for your kids are attached. Print them on US Letter.',
-    '',
-    'You can unsubscribe from any email.',
-    unsubscribeUrl,
-  ].join('\n')
+const EMAIL_COPY: Record<Schedule, { subject: string; lead: string }> = {
+  daily: {
+    subject: "Today's OlloBooks puzzles",
+    lead: "Today's Sudoku puzzles for your kids are attached. Print them on US Letter.",
+  },
+  weekly: {
+    subject: "This week's OlloBooks puzzles",
+    lead: "This week's Sudoku puzzles for your kids are attached. Print them on US Letter.",
+  },
+  monthly: {
+    subject: "This month's OlloBooks puzzles",
+    lead: "This month's Sudoku puzzles for your kids are attached. Print them on US Letter.",
+  },
+}
+
+export function puzzleEmail(unsubscribeUrl: string, schedule: Schedule = 'daily'): { subject: string; text: string; html: string } {
+  const copy = EMAIL_COPY[schedule]
+  const text = [copy.lead, '', 'You can unsubscribe from any email.', unsubscribeUrl].join('\n')
   const safeUrl = escapeHtml(unsubscribeUrl)
   const html = `<!doctype html><html><body style="margin:0;background:#f3e7d4;color:#241c16;font-family:Georgia,serif;padding:24px">
-<p style="font-size:18px;line-height:1.45">A few Sudoku puzzles for your kids are attached. Print them on US Letter.</p>
+<p style="font-size:18px;line-height:1.45">${escapeHtml(copy.lead)}</p>
 <p style="font-size:14px;color:#6b5c4e">You can unsubscribe from any email.</p>
 <p><a href="${safeUrl}" style="color:#c44724">Unsubscribe</a></p>
 </body></html>`
-  return { subject, text, html }
+  return { subject: copy.subject, text, html }
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -89,8 +128,9 @@ export async function sendPuzzleEmail(options: {
   to: string
   unsubscribeUrl: string
   pdf: Uint8Array
+  schedule?: Schedule
 }): Promise<SendResult> {
-  const message = puzzleEmail(options.unsubscribeUrl)
+  const message = puzzleEmail(options.unsubscribeUrl, options.schedule ?? 'daily')
   const response = await options.fetchImpl('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -140,7 +180,7 @@ export async function runDaily(deps: DailyDeps = {}): Promise<DailyResult> {
 
   const subscribers = await store.list()
   const active = subscribers.filter((subscriber) => !subscriber.unsubscribedAt)
-  const eligible = active.filter((subscriber) => subscriber.lastSentOn !== day)
+  const eligible = active.filter((subscriber) => isDue(subscriber, now))
   const result: DailyResult = {
     ok: true,
     mode,
@@ -191,6 +231,7 @@ export async function runDaily(deps: DailyDeps = {}): Promise<DailyResult> {
         to: subscriber.email,
         unsubscribeUrl: unsubscribeLink(origin, token),
         pdf: pdf.bytes,
+        schedule: subscriberSchedule(subscriber),
       })
       if (!sent.ok) {
         result.failed += 1
