@@ -1,5 +1,7 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import react from '@vitejs/plugin-react'
 import { fireweave, type FireweaveVitePlugin } from '@fireweaveai/web-sdk/vite'
+import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 // The Vite plugin fails the build when no browser key and no environment name
@@ -28,8 +30,43 @@ function fireweaveUnlessUnconfigured(): FireweaveVitePlugin {
   }
 }
 
+function dailySubscriptionDevApi(): Plugin {
+  return {
+    name: 'daily-subscription-dev-api',
+    apply: 'serve',
+    async configureServer(server) {
+      if (process.env.VITEST || server.config.mode === 'test') return
+      const loadHandler = () =>
+        server.ssrLoadModule('/src/subscription/devApi.ts') as Promise<{
+          handleDevApi: (request: IncomingMessage, response: ServerResponse) => Promise<boolean>
+        }>
+      void loadHandler()
+      server.middlewares.use((req, res, next) => {
+        const path = (req.url ?? '').split('?')[0]?.replace(/\/$/, '') || '/'
+        if (path !== '/api/subscribe' && path !== '/api/unsubscribe' && path !== '/api/daily') {
+          next()
+          return
+        }
+        void loadHandler().then((loaded) => loaded.handleDevApi(req, res)).then(
+          (handled) => {
+            if (!handled) next()
+          },
+          (error: unknown) => {
+            console.error('[ollobooks] subscription API failed', error)
+            if (!res.headersSent) {
+              res.statusCode = 500
+              res.setHeader('content-type', 'application/json; charset=utf-8')
+              res.end(JSON.stringify({ ok: false, error: "We couldn't save that subscription. Please try again." }))
+            }
+          },
+        )
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), fireweaveUnlessUnconfigured()],
+  plugins: [react(), fireweaveUnlessUnconfigured(), dailySubscriptionDevApi()],
   test: {
     environment: 'node',
   },

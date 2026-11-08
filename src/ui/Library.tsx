@@ -1,4 +1,5 @@
 import posthog, { isPostHogConfigured } from '../posthog.ts'
+import { DailySubscribe } from './DailySubscribe.tsx'
 
 const SAMPLE = ['', '2', '', '4', '3', '', '4', '', '', '1', '', '3', '2', '', '', '1']
 
@@ -56,6 +57,7 @@ export function Library({ onOpen }: { onOpen: () => void }) {
           </article>
         </div>
       </section>
+      <DailySubscribe placement="library" />
     </main>
   )
 }

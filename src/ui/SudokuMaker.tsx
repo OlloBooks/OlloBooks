@@ -12,6 +12,7 @@ import {
   type PerSheet,
   type Size,
 } from '../sudoku/model.ts'
+import { DailySubscribe } from './DailySubscribe.tsx'
 import { PuzzleGrid } from './PuzzleGrid.tsx'
 
 type Options = {
@@ -297,6 +298,7 @@ export function SudokuMaker({ onBack }: { onBack: () => void }) {
           )}
         </aside>
       </div>
+      <DailySubscribe placement="maker" />
     </main>
   )
 }
