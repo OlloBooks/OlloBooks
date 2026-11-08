@@ -365,9 +365,80 @@ legend {
 .puzzle-grid[data-size='9'] .puzzle-cell { font-size: clamp(11px, 2vw, 18px); }
 .puzzle-grid[data-size='4'] .puzzle-cell { font-size: clamp(22px, 4vw, 40px); }
 
-button:focus-visible, input:focus-visible {
+button:focus-visible, input:focus-visible, a:focus-visible {
   outline: 3px solid #e7a08a;
   outline-offset: 3px;
+}
+
+.subscribe {
+  min-width: 0;
+  margin-top: 28px;
+}
+
+.subscribe-card {
+  padding: 22px 22px 18px;
+  border: 1px solid #e5d4bf;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(196, 71, 36, 0.08), transparent 28%),
+    var(--card);
+  box-shadow: 0 18px 40px rgba(70, 42, 16, 0.08);
+}
+
+.subscribe-card h2 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  max-width: 16ch;
+}
+
+.subscribe-lede {
+  max-width: 38rem;
+  margin: 10px 0 4px;
+  color: var(--muted);
+}
+
+.subscribe-form {
+  margin-top: 8px;
+}
+
+.subscribe input[type='email'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 1px solid #e0d0bc;
+  border-radius: 14px;
+  background: white;
+}
+
+.subscribe .choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.subscribe .choice {
+  min-height: 56px;
+}
+
+.subscribe .stepper input {
+  min-width: 0;
+}
+
+.subscribe-success {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  background: white;
+}
+
+.subscribe-success p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.subscribe-success .hint {
+  font-weight: 700;
 }
 
 @media (max-width: 800px) {

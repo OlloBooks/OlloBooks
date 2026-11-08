@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fireweaveai/web-sdk": "^3.0.0",
+    "@upstash/redis": "^1.41.0",
     "jspdf": "^4.2.1",
     "posthog-js": "^1.447.3",
     "react": "^19.3.1",
