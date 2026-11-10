@@ -1,0 +1,46 @@
+import type { Difficulty } from '../sudoku/model.ts'
+
+/** Kid spelling words, grouped so each difficulty stays in one length band. */
+export const WORD_LISTS: Record<Difficulty, readonly string[]> = {
+  easy: [
+    'cat', 'dog', 'sun', 'hat', 'pig', 'cup', 'bus', 'map', 'bed', 'red',
+    'box', 'bat', 'hen', 'jam', 'pen', 'log', 'fox', 'cow', 'ant', 'egg',
+    'pie', 'toy', 'car', 'bag', 'mug', 'fan', 'web', 'key', 'nut', 'lid',
+    'pan', 'pot', 'rug', 'owl', 'bee', 'hop', 'sit', 'run', 'dig', 'jet',
+    'star', 'moon', 'fish', 'bird', 'frog', 'duck', 'cake', 'book', 'tree', 'rain',
+    'snow', 'milk', 'ball', 'kite', 'ship', 'seed', 'leaf', 'nest', 'drum', 'sand',
+    'wave', 'sock', 'lamp', 'bell', 'corn', 'farm', 'gate', 'hill', 'jump', 'king',
+    'lake', 'mail', 'nose', 'park', 'ring', 'soap', 'tent', 'wind', 'yard', 'home',
+    'desk', 'pony', 'crab', 'wolf', 'lion', 'seal', 'deer', 'goat', 'lamb', 'calf',
+    'toad', 'mole', 'pear', 'plum', 'bean', 'rice', 'soup', 'swan',
+  ],
+  medium: [
+    'apple', 'grape', 'lemon', 'peach', 'mango', 'berry', 'plant', 'grass', 'cloud', 'stone',
+    'river', 'ocean', 'beach', 'storm', 'light', 'smile', 'happy', 'candy', 'bread', 'crayon',
+    'paper', 'music', 'story', 'magic', 'giant', 'queen', 'crown', 'horse', 'tiger', 'zebra',
+    'sheep', 'whale', 'shark', 'mouse', 'house', 'water', 'train', 'chair', 'table', 'clock',
+    'watch', 'shirt', 'pants', 'shoes', 'boots', 'dress', 'glove', 'scarf', 'socks', 'jeans',
+    'skirt', 'green', 'brown', 'black', 'white', 'spoon', 'petal', 'tulip', 'robin', 'eagle',
+    'puppy', 'bunny', 'panda', 'koala', 'camel', 'rhino', 'hippo', 'otter', 'moose', 'goose',
+    'crane', 'quail', 'brush', 'sword', 'daisy', 'juice', 'straw', 'glass', 'party',
+    'fruit', 'olive', 'earth', 'field', 'creek', 'porch', 'cabin', 'fence', 'wagon', 'trail',
+    'animal', 'school', 'friend', 'pencil', 'winter', 'purple', 'yellow', 'orange', 'banana', 'cherry',
+    'dragon', 'knight', 'prince', 'valley', 'desert', 'island', 'jungle', 'forest', 'garden', 'flower',
+    'branch', 'castle', 'family', 'window', 'basket', 'market', 'rocket', 'planet', 'turtle', 'rabbit',
+    'carrot', 'button', 'cookie', 'puzzle', 'circle', 'bridge', 'pocket', 'muffin', 'butter', 'pirate',
+    'silver', 'copper', 'bronze', 'farmer', 'picnic', 'meadow', 'summer', 'spring', 'autumn', 'season',
+    'candle', 'ribbon', 'mother', 'father', 'sister', 'cousin', 'letter', 'number', 'square', 'cheese',
+    'potato', 'tomato', 'pickle', 'pepper', 'onion', 'garlic', 'cereal', 'yogurt', 'napkin', 'kitten',
+  ],
+  hard: [
+    'balloon', 'bicycle', 'blanket', 'captain', 'chicken', 'diamond', 'dolphin', 'giraffe', 'hamster', 'holiday',
+    'iceberg', 'ladybug', 'library', 'monster', 'morning', 'octopus', 'penguin', 'popcorn', 'pumpkin', 'rainbow',
+    'thunder', 'tornado', 'unicorn', 'volcano', 'cupcake', 'pretzel', 'coconut', 'teacher', 'kitchen', 'grandma',
+    'brother', 'snowman', 'compass', 'picture', 'rooster', 'tractor', 'lettuce', 'pancake', 'costume', 'bedtime',
+    'crystal', 'kingdom', 'elephant', 'flamingo', 'kangaroo', 'mountain', 'necklace', 'sandwich', 'starfish', 'sunshine',
+    'treasure', 'airplane', 'backpack', 'birthday', 'campfire', 'dinosaur', 'envelope', 'football', 'goldfish', 'keyboard',
+    'magazine', 'notebook', 'question', 'railroad', 'scissors', 'snowball', 'umbrella', 'vacation', 'broccoli', 'cucumber',
+    'seashell', 'lemonade', 'princess', 'homework', 'spelling', 'chipmunk', 'hedgehog', 'aquarium', 'sapphire', 'frosting',
+    'squirrel', 'raincoat',
+  ],
+}

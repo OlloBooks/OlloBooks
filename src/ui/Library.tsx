@@ -1,12 +1,21 @@
+import { fw } from '@fireweaveai/web-sdk/start'
 import posthog, { isPostHogConfigured } from '../posthog.ts'
 import { DailySubscribe } from './DailySubscribe.tsx'
 
 const SAMPLE = ['', '2', '', '4', '3', '', '4', '', '', '1', '', '3', '2', '', '', '1']
 
-export function Library({ onOpen }: { onOpen: () => void }) {
+export function Library({ onOpen }: { onOpen: (activity: 'sudoku' | 'anagrams') => void }) {
+  // @fireweave-controlpoint anagram-sheets
+  const anagramsEnabled = fw.controlPoints.getBooleanValue('anagram-sheets', false)
+
   function openSudokuMaker() {
     if (isPostHogConfigured) posthog.capture('sudoku_maker_opened')
-    onOpen()
+    onOpen('sudoku')
+  }
+
+  function openAnagrams() {
+    if (isPostHogConfigured) posthog.capture('anagram_maker_opened')
+    onOpen('anagrams')
   }
 
   return (
@@ -21,7 +30,9 @@ export function Library({ onOpen }: { onOpen: () => void }) {
         </div>
       </header>
       <p className="lede">
-        Free printable books you make at the kitchen table. Sudoku is ready. Bingo, crosswords, and stories are next.
+        {anagramsEnabled
+          ? 'Free printable books you make at the kitchen table. Sudoku and anagrams are ready. Bingo, crosswords, and stories are next.'
+          : 'Free printable books you make at the kitchen table. Sudoku is ready. Bingo, crosswords, and stories are next.'}
       </p>
 
       <section className="shelf" aria-label="Books">
@@ -38,6 +49,23 @@ export function Library({ onOpen }: { onOpen: () => void }) {
             <span className="book-go">Make a Sudoku book</span>
           </span>
         </button>
+
+        {anagramsEnabled ? (
+          <button className="book-anagram" type="button" onClick={openAnagrams}>
+            <span className="mini-words" aria-hidden="true">
+              <span>C T A</span>
+              <span>G O D</span>
+              <span>S N U</span>
+              <span>H T A</span>
+            </span>
+            <span className="book-copy">
+              <span className="kicker">Ready to print</span>
+              <h2>Anagrams</h2>
+              <p>Scrambled words for kids to solve. Pick a difficulty, or type 5–8 of your own words, then print a letter-size worksheet.</p>
+              <span className="book-go">Make an anagram sheet</span>
+            </span>
+          </button>
+        ) : null}
 
         <div className="soon-row">
           <article className="book-soon">

@@ -4,4 +4,5 @@ import { defineControlPoints } from '@fireweaveai/web-sdk/start';
 
 export const controlPoints = defineControlPoints({
   'daily-kids-puzzles': { local: true },
+  'anagram-sheets': { local: true },
 });

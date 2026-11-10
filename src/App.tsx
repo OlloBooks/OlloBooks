@@ -1,17 +1,27 @@
+import { fw } from '@fireweaveai/web-sdk/start'
 import { useEffect, useState } from 'react'
 import { LIBRARY_TITLE } from './seo.ts'
+import { AnagramMaker } from './ui/AnagramMaker.tsx'
 import { Library } from './ui/Library.tsx'
 import { SudokuMaker } from './ui/SudokuMaker.tsx'
 
+type Screen = 'library' | 'sudoku' | 'anagrams'
+
 export default function App() {
-  const [screen, setScreen] = useState<'library' | 'sudoku'>('library')
+  // @fireweave-controlpoint anagram-sheets
+  const anagramsEnabled = fw.controlPoints.getBooleanValue('anagram-sheets', false)
+  const [screen, setScreen] = useState<Screen>('library')
+  const visibleScreen: Screen = screen === 'anagrams' && !anagramsEnabled ? 'library' : screen
 
   useEffect(() => {
-    if (screen === 'library') document.title = LIBRARY_TITLE
-  }, [screen])
+    if (visibleScreen === 'library') document.title = LIBRARY_TITLE
+  }, [visibleScreen])
 
-  if (screen === 'sudoku') {
+  if (visibleScreen === 'sudoku') {
     return <SudokuMaker onBack={() => setScreen('library')} />
   }
-  return <Library onOpen={() => setScreen('sudoku')} />
+  if (visibleScreen === 'anagrams') {
+    return <AnagramMaker onBack={() => setScreen('library')} />
+  }
+  return <Library onOpen={setScreen} />
 }
