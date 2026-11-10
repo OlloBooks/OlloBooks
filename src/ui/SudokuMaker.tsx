@@ -12,6 +12,7 @@ import {
   type PerSheet,
   type Size,
 } from '../sudoku/model.ts'
+import { LIBRARY_TITLE, SUDOKU_TITLE } from '../seo.ts'
 import { DailySubscribe } from './DailySubscribe.tsx'
 import { PuzzleGrid } from './PuzzleGrid.tsx'
 
@@ -77,9 +78,9 @@ export function SudokuMaker({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Sudoku · OlloBooks'
+    document.title = SUDOKU_TITLE
     return () => {
-      document.title = 'OlloBooks'
+      document.title = LIBRARY_TITLE
     }
   }, [])
 
