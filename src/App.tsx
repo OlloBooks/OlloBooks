@@ -23,5 +23,5 @@ export default function App() {
   if (visibleScreen === 'anagrams') {
     return <AnagramMaker onBack={() => setScreen('library')} />
   }
-  return <Library onOpen={setScreen} />
+  return <Library onOpen={setScreen} anagramsEnabled={anagramsEnabled} />
 }

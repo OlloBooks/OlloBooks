@@ -1,4 +1,3 @@
-import { fw } from '@fireweaveai/web-sdk/start'
 import { useEffect, useState } from 'react'
 import {
   DEFAULT_WORD_COUNT,
@@ -79,20 +78,17 @@ function captureSheetEvent(event: string, options: Options) {
 }
 
 export function AnagramMaker({ onBack }: { onBack: () => void }) {
-  // @fireweave-controlpoint anagram-sheets
-  const enabled = fw.controlPoints.getBooleanValue('anagram-sheets', false)
   const [options, setOptions] = useState<Options>(DEFAULTS)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [madeWith, setMadeWith] = useState<Options | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!enabled) return
     document.title = ANAGRAM_TITLE
     return () => {
       document.title = LIBRARY_TITLE
     }
-  }, [enabled])
+  }, [])
 
   const stale = Boolean(sheet && madeWith && !sameOptions(options, madeWith))
 
@@ -167,8 +163,6 @@ export function AnagramMaker({ onBack }: { onBack: () => void }) {
       ...sheetAttributes(madeWith),
     })
   }
-
-  if (!enabled) return null
 
   return (
     <main className="page anagram-page">

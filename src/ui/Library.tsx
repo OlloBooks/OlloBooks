@@ -1,13 +1,15 @@
-import { fw } from '@fireweaveai/web-sdk/start'
 import posthog, { isPostHogConfigured } from '../posthog.ts'
 import { DailySubscribe } from './DailySubscribe.tsx'
 
 const SAMPLE = ['', '2', '', '4', '3', '', '4', '', '', '1', '', '3', '2', '', '', '1']
 
-export function Library({ onOpen }: { onOpen: (activity: 'sudoku' | 'anagrams') => void }) {
-  // @fireweave-controlpoint anagram-sheets
-  const anagramsEnabled = fw.controlPoints.getBooleanValue('anagram-sheets', false)
-
+export function Library({
+  onOpen,
+  anagramsEnabled,
+}: {
+  onOpen: (activity: 'sudoku' | 'anagrams') => void
+  anagramsEnabled: boolean
+}) {
   function openSudokuMaker() {
     if (isPostHogConfigured) posthog.capture('sudoku_maker_opened')
     onOpen('sudoku')
